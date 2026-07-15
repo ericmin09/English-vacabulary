@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>타자사전 — 그냥 타이핑하세요</title>
+<meta name="theme-color" content="#1F3A4D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="타자사전">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #E9E3D4;
+    --paper-deep: #DFD8C6;
+    --ink: #232120;
+    --ink-soft: #55504A;
+    --indigo: #1F3A4D;
+    --indigo-soft: #3E5C70;
+    --gold: #B08A2E;
+    --rule: #C6BCA4;
+    --card: #F3EFE3;
+    --danger: #A34A3F;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(31,58,77,0.05), transparent 40%),
+      radial-gradient(circle at 85% 92%, rgba(176,138,46,0.06), transparent 45%);
+    color:var(--ink);
+    font-family:'Source Serif 4', Georgia, serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .hidden-input{
+    position:absolute;
+    opacity:0;
+    pointer-events:none;
+    width:1px;height:1px;
+    left:-999px;
+  }
+  header{
+    width:100%;
+    max-width:760px;
+    padding:calc(20px + env(safe-area-inset-top)) 20px 0;
+    text-align:center;
+  }
+  .brand{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--indigo);
+  }
+  .tagline{
+    margin-top:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    letter-spacing:0.02em;
+  }
+
+  nav.tabs{
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    margin-top:18px;
+    background:var(--card);
+    border:1px solid var(--rule);
+    border-radius:999px;
+    padding:4px;
+    width:fit-content;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  nav.tabs button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    padding:9px 16px;
+    border-radius:999px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  nav.tabs button.active{
+    background:var(--indigo);
+    color:#fff;
+  }
+
+  main{
+    width:100%;
+    max-width:760px;
+    padding:24px 20px 100px;
+    flex:1;
+  }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* ---------- search view ---------- */
+  .type-stage{
+    position:relative;
+    border-bottom:2px solid var(--ink);
+    padding:16px 4px 18px;
+    margin-bottom:8px;
+    min-height:80px;
+    display:flex;
+    align-items:flex-end;
+    cursor:text;
+  }
+  .type-stage .placeholder{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    color:#9C9484;
+    letter-spacing:0.01em;
+  }
+  .typed-word{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:48px;
+    line-height:1;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+    white-space:pre;
+    display:inline-flex;
+    align-items:baseline;
+    word-break:break-word;
+  }
+  .cursor{
+    display:inline-block;
+    width:3px;
+    height:38px;
+    background:var(--gold);
+    margin-left:4px;
+    transform:translateY(4px);
+    animation:blink 1s step-end infinite;
+    flex-shrink:0;
+  }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+  .status-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+    padding:8px 4px 0;
+    gap:10px;
+  }
+  .status-line .hint{ opacity:0.75; }
+  .status-line .clear-btn{
+    background:none;border:none;cursor:pointer;
+    color:var(--indigo-soft);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    text-decoration:underline;
+    padding:6px 0;
+    flex-shrink:0;
+  }
+
+  #result-zone{ margin-top:30px; min-height:120px; }
+
+  .loading{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--indigo-soft);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 4px;
+  }
+  .loading .dot{ width:6px;height:6px;border-radius:50%; background:var(--gold); animation:pulse 1.1s ease-in-out infinite; }
+  .loading .dot:nth-child(2){animation-delay:0.15s;}
+  .loading .dot:nth-child(3){animation-delay:0.3s;}
+  @keyframes pulse{ 0%,100%{opacity:0.25; transform:scale(0.8);} 50%{opacity:1; transform:scale(1.1);} }
+
+  .empty-state{ padding:18px 4px; color:var(--ink-soft); font-size:14.5px; line-height:1.7; }
+  .empty-state .kbd{
+    font-family:'IBM Plex Mono', monospace; font-size:11px;
+    background:var(--card); border:1px solid var(--rule); border-radius:4px;
+    padding:2px 6px; color:var(--indigo);
+  }
+
+  .not-found{ padding:22px 4px; border-left:3px solid var(--gold); padding-left:16px; }
+  .not-found .nf-title{ font-family:'Fraunces', serif; font-weight:600; font-size:19px; margin-bottom:6px; }
+  .not-found .nf-desc{ color:var(--ink-soft); font-size:14px; }
+
+  .translated-hint{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--indigo-soft);
+    margin:2px 4px 10px;
+  }
+
+  .entry-card{ animation:reveal 0.35s ease both; }
+  @keyframes reveal{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .entry-head{
+    display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap;
+    padding-bottom:14px; border-bottom:1px solid var(--rule); margin-bottom:6px;
+  }
+  .entry-head-main{ flex:1; min-width:180px; }
+  .entry-word-row{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .entry-word{ font-family:'Fraunces', serif; font-weight:600; font-size:32px; color:var(--ink); }
+  .entry-phonetic{ font-family:'IBM Plex Mono', monospace; font-size:14px; color:var(--indigo-soft); }
+  .entry-actions{ display:flex; gap:8px; align-items:center; flex-shrink:0; }
+  .icon-btn{
+    background:none; border:1px solid var(--rule); border-radius:999px;
+    width:36px;height:36px; display:inline-flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--indigo); font-size:15px; transition:background 0.15s, transform 0.15s, border-color .15s;
+  }
+  .icon-btn:hover{ background:var(--card); transform:scale(1.05); }
+  .icon-btn.saved{ background:var(--gold); border-color:var(--gold); color:#fff; }
+
+  .primary-ko{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-style:italic;
+    font-size:19px;
+    color:var(--indigo);
+    margin:10px 0 20px;
+    line-height:1.5;
+  }
+
+  .meaning-block{ margin-bottom:20px; }
+  .pos-label{
+    display:inline-block; font-family:'IBM Plex Mono', monospace; font-size:10.5px;
+    letter-spacing:0.06em; text-transform:uppercase; color:#fff; background:var(--indigo);
+    padding:3px 9px; border-radius:3px; margin-bottom:10px;
+  }
+  .def-item{ margin-bottom:14px; padding-left:20px; position:relative; }
+  .def-item .def-num{ position:absolute; left:0; top:1px; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--gold); }
+  .def-text{ font-size:15.5px; line-height:1.6; color:var(--ink); }
+  .def-text-ko{ font-size:14px; color:var(--indigo-soft); margin-top:2px; }
+
+  .examples-section{ margin-top:24px; padding-top:16px; border-top:1px dashed var(--rule); }
+  .examples-title{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--ink-soft); margin-bottom:12px;
+  }
+  .example-item{
+    background:var(--card); border:1px solid var(--rule); border-radius:8px;
+    padding:12px 14px; margin-bottom:10px;
+  }
+  .example-en{ font-size:15px; font-style:italic; color:var(--ink); line-height:1.55; }
+  .example-ko{ font-size:12.5px; color:var(--ink-soft); margin-top:5px; font-family:'IBM Plex Mono', monospace; }
+
+  .history-zone{ margin-top:36px; padding-top:16px; border-top:1px dashed var(--rule); }
+  .history-label{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px; }
+  .history-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .history-chip{
+    font-family:'IBM Plex Mono', monospace; font-size:13px; background:var(--card);
+    border:1px solid var(--rule); border-radius:999px; padding:6px 13px; cursor:pointer;
+    color:var(--ink); transition:border-color 0.15s, color 0.15s;
+  }
+  .history-chip:hover{ border-color:var(--indigo); color:var(--indigo); }
+
+  /* ---------- saved / wordbook views ---------- */
+  .view-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:18px; gap:10px; flex-wrap:wrap;
+  }
+  .view-title{ font-family:'Fraunces', serif; font-weight:600; font-size:24px; }
+  .view-sub{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+    border:1px solid var(--indigo); background:var(--indigo); color:#fff;
+    padding:9px 15px; border-radius:6px; cursor:pointer; white-space:nowrap;
+  }
+  .btn.secondary{ background:none; color:var(--indigo); }
+  .btn.danger{ border-color:var(--danger); background:none; color:var(--danger); }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .word-row{
+    display:flex; align-items:center; gap:12px;
+    padding:13px 6px; border-bottom:1px solid var(--rule);
+  }
+  .word-row .chk{ width:18px; height:18px; accent-color:var(--indigo); flex-shrink:0; display:none; }
+  .word-row.select-mode .chk{ display:inline-block; }
+  .word-row .wr-en{
+    flex:1; font-family:'Fraunces', serif; font-weight:600; font-size:17px; color:var(--ink);
+    cursor:pointer;
+  }
+  .word-row .wr-ko{ flex:1; font-size:14.5px; color:var(--indigo-soft); }
+  .word-row .wr-del{
+    background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:16px;
+    padding:4px 6px; flex-shrink:0;
+  }
+  .word-row .wr-del:hover{ color:var(--danger); }
+
+  .selection-bar{
+    position:sticky; bottom:0; margin-top:16px; padding:12px 14px;
+    background:var(--indigo); color:#fff; border-radius:10px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+  }
+  .selection-bar .btn{ background:var(--gold); border-color:var(--gold); }
+
+  .wb-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .wb-card{
+    background:var(--card); border:1px solid var(--rule); border-radius:10px;
+    padding:16px; cursor:pointer; transition:border-color .15s, transform .15s;
+  }
+  .wb-card:hover{ border-color:var(--indigo); transform:translateY(-2px); }
+  .wb-card .wb-name{ font-family:'Fraunces', serif; font-weight:600; font-size:17px; margin-bottom:6px; }
+  .wb-card .wb-count{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); }
+
+  .back-link{
+    background:none; border:none; color:var(--indigo-soft); cursor:pointer;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; padding:0; margin-bottom:14px;
+    display:inline-flex; align-items:center; gap:5px;
+  }
+
+  /* ---------- modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(35,33,32,0.5);
+    display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal-box{
+    background:var(--paper); border:1px solid var(--rule); border-radius:12px;
+    padding:22px; width:100%; max-width:360px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  }
+  .modal-box h3{ font-family:'Fraunces', serif; font-size:18px; margin:0 0 12px; }
+  .modal-box input{
+    width:100%; font-family:'Source Serif 4', serif; font-size:15px;
+    padding:10px 12px; border:1px solid var(--rule); border-radius:6px;
+    background:#fff; color:var(--ink); margin-bottom:14px;
+  }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; z-index:60;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
+
+  footer{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.7; padding-bottom:20px; }
+
+  @media (max-width:520px){
+    .typed-word{ font-size:34px; }
+    .cursor{ height:26px; }
+    .entry-word{ font-size:24px; }
+    .wb-grid{ grid-template-columns:1fr; }
+    nav.tabs{ width:100%; justify-content:space-between; }
+    nav.tabs button{ flex:1; padding:9px 6px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cursor{ animation:none; opacity:1; }
+    .loading .dot{ animation:none; }
+    .entry-card{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<input id="hidden-input" class="hidden-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="단어 입력">
+
+<header>
+  <div class="brand">TYPE · DICT</div>
+  <div class="tagline">클릭하지 마세요. 그냥 입력하세요.</div>
+  <nav class="tabs">
+    <button data-view="search" class="active">검색</button>
+    <button data-view="saved">저장한 단어</button>
+    <button data-view="wordbooks">내 단어장</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ===== 검색 화면 ===== -->
+  <section class="view active" id="view-search">
+    <div class="type-stage" id="type-stage">
+      <span class="typed-word" id="typed-word"></span><span class="cursor" id="cursor"></span>
+      <span class="placeholder" id="placeholder">영어 단어나 한글 뜻을 입력해 보세요 — 예: garden, 정원</span>
+    </div>
+    <div class="status-line">
+      <span class="hint">Enter 즉시 검색 · Esc 초기화</span>
+      <button class="clear-btn" id="clear-btn" style="display:none;">지우기</button>
+    </div>
+
+    <div id="result-zone">
+      <div class="empty-state" id="initial-empty">
+        검색창을 클릭할 필요 없어요. 화면 아무 곳에서나 <span class="kbd">A</span><span class="kbd">B</span><span class="kbd">C</span> 를 누르면 바로 검색이 시작돼요.
+        한글로 입력하면 뜻에 맞는 영어 단어를 찾아드려요.
+      </div>
+    </div>
+
+    <div class="history-zone" id="history-zone" style="display:none;">
+      <div class="history-label">최근 검색</div>
+      <div class="history-chips" id="history-chips"></div>
+    </div>
+  </section>
+
+  <!-- ===== 저장한 단어 화면 ===== -->
+  <section class="view" id="view-saved">
+    <div class="view-header">
+      <div>
+        <div class="view-title">저장한 단어</div>
+        <div class="view-sub" id="saved-count-label">0개 저장됨</div>
+      </div>
+      <button class="btn secondary" id="toggle-select-btn">단어 선택하기</button>
+    </div>
+    <div id="saved-list"></div>
+    <div class="selection-bar" id="selection-bar" style="display:none;">
+      <span id="selection-count">0개 선택됨</span>
+      <button class="btn" id="make-wordbook-btn">단어장 만들기</button>
+    </div>
+  </section>
+
+  <!-- ===== 단어장 목록 화면 ===== -->
+  <section class="view" id="view-wordbooks">
+    <div class="view-header">
+      <div>
+        <div class="view-title">내 단어장</div>
+        <div class="view-sub">저장한 단어들로 만든 나만의 묶음</div>
+      </div>
+    </div>
+    <div id="wordbook-list"></div>
+  </section>
+
+  <!-- ===== 단어장 상세 화면 ===== -->
+  <section class="view" id="view-wordbook-detail">
+    <button class="back-link" id="wb-back-btn">← 내 단어장으로</button>
+    <div class="view-header">
+      <div>
+        <div class="view-title" id="wb-detail-title">단어장</div>
+        <div class="view-sub" id="wb-detail-count">0개 단어</div>
+      </div>
+      <button class="btn danger" id="wb-delete-btn">단어장 삭제</button>
+    </div>
+    <div id="wb-detail-list"></div>
+  </section>
+
+</main>
+
+<footer>Dictionary: Free Dictionary API · Translation: MyMemory API</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  /* ---------------- storage ---------------- */
+  const LS_HISTORY = 'typedict-history';
+  const LS_SAVED = 'typedict-saved';
+  const LS_WORDBOOKS = 'typedict-wordbooks';
+
+  function loadLS(key, fallback){
+    try{
+      const v = JSON.parse(localStorage.getItem(key) || 'null');
+      return v === null ? fallback : v;
+    }catch(e){ return fallback; }
+  }
+  function saveLS(key, val){
+    localStorage.setItem(key, JSON.stringify(val));
+  }
+
+  let history = loadLS(LS_HISTORY, []);
+  let savedWords = loadLS(LS_SAVED, []);     // [{id, word, phonetic, meaningKo, savedAt}]
+  let wordbooks = loadLS(LS_WORDBOOKS, []);  // [{id, name, wordIds:[], createdAt}]
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  /* ---------------- toast ---------------- */
+  const toastEl = document.getElementById('toast');
+  let toastTimer = null;
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  }
+
+  /* ---------------- modal ---------------- */
+  function openModal({title, placeholder, initial, onConfirm}){
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3>${title}</h3>
+        <input type="text" id="modal-input" placeholder="${placeholder||''}" value="${initial||''}">
+        <div class="modal-actions">
+          <button class="btn secondary" id="modal-cancel">취소</button>
+          <button class="btn" id="modal-confirm">확인</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#modal-input');
+    input.focus();
+    input.select();
+    function close(){ overlay.remove(); }
+    overlay.querySelector('#modal-cancel').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if(e.target === overlay) close(); });
+    function confirm(){
+      const val = input.value.trim();
+      if(!val) return;
+      close();
+      onConfirm(val);
+    }
+    overlay.querySelector('#modal-confirm').addEventListener('click', confirm);
+    input.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') confirm();
+      if(e.key === 'Escape') close();
+    });
+  }
+
+  /* ---------------- view routing ---------------- */
+  const views = {
+    search: document.getElementById('view-search'),
+    saved: document.getElementById('view-saved'),
+    wordbooks: document.getElementById('view-wordbooks'),
+    'wordbook-detail': document.getElementById('view-wordbook-detail'),
+  };
+  const tabButtons = document.querySelectorAll('nav.tabs button');
+  let currentWordbookId = null;
+
+  function goTo(viewName){
+    Object.keys(views).forEach(k => views[k].classList.toggle('active', k === viewName));
+    tabButtons.forEach(b => b.classList.toggle('active', b.dataset.view === viewName));
+    if(viewName === 'saved') renderSavedView();
+    if(viewName === 'wordbooks') renderWordbooksView();
+    if(viewName === 'search') focusInput();
+  }
+  tabButtons.forEach(btn => btn.addEventListener('click', () => goTo(btn.dataset.view)));
+
+  /* ================= SEARCH VIEW ================= */
+  const hiddenInput = document.getElementById('hidden-input');
+  const typedWordEl = document.getElementById('typed-word');
+  const placeholderEl = document.getElementById('placeholder');
+  const resultZone = document.getElementById('result-zone');
+  const clearBtn = document.getElementById('clear-btn');
+  const typeStage = document.getElementById('type-stage');
+  const historyZone = document.getElementById('history-zone');
+  const historyChips = document.getElementById('history-chips');
+
+  let debounceTimer = null;
+  let currentRequestId = 0;
+  const translationCache = {};
+
+  function renderHistory(){
+    if(history.length === 0){ historyZone.style.display = 'none'; return; }
+    historyZone.style.display = 'block';
+    historyChips.innerHTML = '';
+    history.slice(0,10).forEach(w => {
+      const chip = document.createElement('button');
+      chip.className = 'history-chip';
+      chip.textContent = w;
+      chip.addEventListener('click', () => {
+        hiddenInput.value = w;
+        syncDisplay();
+        doSearch(w);
+        focusInput();
+      });
+      historyChips.appendChild(chip);
+    });
+  }
+  function pushHistory(word){
+    word = word.toLowerCase();
+    history = [word, ...history.filter(w => w !== word)].slice(0,10);
+    saveLS(LS_HISTORY, history);
+    renderHistory();
+  }
+
+  function focusInput(){
+    hiddenInput.focus({preventScroll:true});
+  }
+
+  function syncDisplay(){
+    const val = hiddenInput.value;
+    typedWordEl.textContent = val;
+    placeholderEl.style.display = val.length ? 'none' : 'inline';
+    clearBtn.style.display = val.length ? 'inline' : 'none';
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  const isKorean = (s) => /[\uac00-\ud7a3\u3131-\u318E]/.test(s);
+
+  async function translate(text, from, to){
+    if(!text) return '';
+    const key = from + '|' + to + '|' + text;
+    if(translationCache[key]) return translationCache[key];
+    try{
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`);
+      const data = await res.json();
+      let out = (data && data.responseData && data.responseData.translatedText) ? data.responseData.translatedText : '';
+      out = out.replace(/&#39;/g, "'").trim();
+      translationCache[key] = out;
+      return out;
+    }catch(e){
+      return '';
+    }
+  }
+
+  function showLoading(msg){
+    resultZone.innerHTML = `
+      <div class="loading">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        ${msg || '찾는 중'}
+      </div>`;
+  }
+  function showEmpty(){
+    resultZone.innerHTML = `
+      <div class="empty-state">
+        검색창을 클릭할 필요 없어요. 화면 아무 곳에서나 <span class="kbd">A</span><span class="kbd">B</span><span class="kbd">C</span> 를 누르면 바로 검색이 시작돼요.
+        한글로 입력하면 뜻에 맞는 영어 단어를 찾아드려요.
+      </div>`;
+  }
+  function showNotFound(word){
+    resultZone.innerHTML = `
+      <div class="not-found">
+        <div class="nf-title">"${escapeHtml(word)}" 을(를) 찾을 수 없어요</div>
+        <div class="nf-desc">철자를 확인하거나 원형(기본형) 단어로 다시 입력해 보세요.</div>
+      </div>`;
+  }
+  function playAudio(url){
+    if(!url) return;
+    new Audio(url).play().catch(()=>{});
+  }
+
+  function isSaved(word){
+    return savedWords.some(w => w.word.toLowerCase() === word.toLowerCase());
+  }
+
+  function toggleSave(word, phonetic, meaningKo){
+    const existingIdx = savedWords.findIndex(w => w.word.toLowerCase() === word.toLowerCase());
+    if(existingIdx >= 0){
+      savedWords.splice(existingIdx, 1);
+      showToast('저장 취소했어요');
+    }else{
+      savedWords.unshift({ id: uid(), word, phonetic: phonetic||'', meaningKo: meaningKo||'', savedAt: Date.now() });
+      showToast('단어를 저장했어요');
+    }
+    saveLS(LS_SAVED, savedWords);
+    const btn = document.getElementById('save-btn');
+    if(btn) btn.classList.toggle('saved', isSaved(word));
+  }
+
+  async function renderEntry(entries, originalQuery, translatedQuery){
+    const first = entries[0];
+    const phoneticText = first.phonetic || (first.phonetics.find(p => p.text) || {}).text || '';
+    const audioUrl = (first.phonetics.find(p => p.audio) || {}).audio || '';
+
+    const meaningBlocks = first.meanings.slice(0,4);
+    // gather definitions to translate (limit to control API calls)
+    const defsToTranslate = [];
+    meaningBlocks.forEach(m => {
+      m.definitions.slice(0,2).forEach(d => defsToTranslate.push(d.definition));
+    });
+    const limitedDefs = defsToTranslate.slice(0,6);
+
+    // gather example sentences (up to 3, prefer ones present)
+    const examples = [];
+    meaningBlocks.forEach(m => {
+      m.definitions.forEach(d => {
+        if(d.example && examples.length < 3) examples.push(d.example);
+      });
+    });
+
+    showLoading('한글 뜻을 번역하는 중');
+
+    const [defKoList, exKoList] = await Promise.all([
+      Promise.all(limitedDefs.map(t => translate(t, 'en', 'ko'))),
+      Promise.all(examples.map(t => translate(t, 'en', 'ko')))
+    ]);
+
+    let defPointer = 0;
+    const primaryKoParts = [];
+    let meaningsHtml = '';
+    meaningBlocks.forEach(meaning => {
+      let defsHtml = '';
+      const shownDefs = meaning.definitions.slice(0,2);
+      shownDefs.forEach((def, i) => {
+        const ko = defPointer < limitedDefs.length ? (defKoList[defPointer] || '') : '';
+        if(i === 0 && ko) primaryKoParts.push(ko.split(/[,.;]/)[0].trim());
+        defPointer++;
+        defsHtml += `
+          <div class="def-item">
+            <span class="def-num">${i+1}</span>
+            <div class="def-text">${escapeHtml(def.definition)}</div>
+            ${ko ? `<div class="def-text-ko">${escapeHtml(ko)}</div>` : ''}
+          </div>`;
+      });
+      meaningsHtml += `
+        <div class="meaning-block">
+          <span class="pos-label">${escapeHtml(meaning.partOfSpeech)}</span>
+          ${defsHtml}
+        </div>`;
+    });
+
+    let examplesHtml = '';
+    if(examples.length){
+      examplesHtml = `
+        <div class="examples-section">
+          <div class="examples-title">실생활 예문</div>
+          ${examples.map((ex, i) => `
+            <div class="example-item">
+              <div class="example-en">"${escapeHtml(ex)}"</div>
+              ${exKoList[i] ? `<div class="example-ko">${escapeHtml(exKoList[i])}</div>` : ''}
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    const primaryKo = primaryKoParts.filter(Boolean).slice(0,3).join(', ');
+    const wordSaved = isSaved(first.word);
+
+    resultZone.innerHTML = `
+      <div class="entry-card">
+        ${translatedQuery ? `<div class="translated-hint">"${escapeHtml(originalQuery)}" → <strong>${escapeHtml(translatedQuery)}</strong> 로 검색했어요</div>` : ''}
+        <div class="entry-head">
+          <div class="entry-head-main">
+            <div class="entry-word-row">
+              <span class="entry-word">${escapeHtml(first.word)}</span>
+              ${phoneticText ? `<span class="entry-phonetic">${escapeHtml(phoneticText)}</span>` : ''}
+            </div>
+            ${primaryKo ? `<div class="primary-ko">${escapeHtml(primaryKo)}</div>` : ''}
+          </div>
+          <div class="entry-actions">
+            ${audioUrl ? `<button class="icon-btn" id="audio-btn" aria-label="발음 듣기">▶</button>` : ''}
+            <button class="icon-btn ${wordSaved ? 'saved' : ''}" id="save-btn" aria-label="단어 저장">★</button>
+          </div>
+        </div>
+        ${meaningsHtml}
+        ${examplesHtml}
+      </div>`;
+
+    if(audioUrl) document.getElementById('audio-btn').addEventListener('click', () => playAudio(audioUrl));
+    document.getElementById('save-btn').addEventListener('click', () => {
+      toggleSave(first.word, phoneticText, primaryKo);
+    });
+  }
+
+  async function fetchDictionary(word){
+    const res = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word));
+    if(!res.ok) return null;
+    const data = await res.json();
+    if(!Array.isArray(data) || data.length === 0) return null;
+    return data;
+  }
+
+  async function doSearch(rawQuery){
+    const query = rawQuery.trim();
+    if(!query){ showEmpty(); return; }
+    const reqId = ++currentRequestId;
+
+    let searchWord = query;
+    let translatedQuery = '';
+
+    if(isKorean(query)){
+      showLoading('영어 단어를 찾는 중');
+      const translated = await translate(query, 'ko', 'en');
+      if(reqId !== currentRequestId) return;
+      const candidate = (translated || '').split(/[\s,.;]/)[0].replace(/[^a-zA-Z'-]/g,'');
+      if(!candidate){ showNotFound(query); return; }
+      searchWord = candidate;
+      translatedQuery = candidate;
+    }else{
+      showLoading('찾는 중');
+    }
+
+    try{
+      const data = await fetchDictionary(searchWord);
+      if(reqId !== currentRequestId) return;
+      if(!data){ showNotFound(query); return; }
+      await renderEntry(data, query, translatedQuery);
+      if(reqId !== currentRequestId) return;
+      pushHistory(data[0].word);
+    }catch(e){
+      if(reqId !== currentRequestId) return;
+      resultZone.innerHTML = `
+        <div class="not-found">
+          <div class="nf-title">연결에 문제가 생겼어요</div>
+          <div class="nf-desc">인터넷 연결을 확인하고 잠시 후 다시 시도해 주세요.</div>
+        </div>`;
+    }
+  }
+
+  function scheduleSearch(){
+    clearTimeout(debounceTimer);
+    const val = hiddenInput.value.trim();
+    if(!val){ showEmpty(); return; }
+    debounceTimer = setTimeout(() => doSearch(val), 550);
+  }
+
+  hiddenInput.addEventListener('input', () => {
+    hiddenInput.value = hiddenInput.value.replace(/[^a-zA-Z\uac00-\ud7a3\u3131-\u318E\s'-]/g, '');
+    syncDisplay();
+    scheduleSearch();
+  });
+  hiddenInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      clearTimeout(debounceTimer);
+      doSearch(hiddenInput.value);
+    }else if(e.key === 'Escape'){
+      hiddenInput.value = '';
+      syncDisplay();
+      showEmpty();
+    }
+  });
+  clearBtn.addEventListener('click', () => {
+    hiddenInput.value = '';
+    syncDisplay();
+    showEmpty();
+    focusInput();
+  });
+  typeStage.addEventListener('click', focusInput);
+
+  document.addEventListener('keydown', (e) => {
+    if(views.search.classList.contains('active') === false) return;
+    if(document.activeElement === hiddenInput) return;
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    if(e.key.length === 1 || e.key === 'Backspace'){
+      focusInput();
+    }
+  });
+  hiddenInput.addEventListener('focus', () => document.body.classList.add('focused'));
+  hiddenInput.addEventListener('blur', () => document.body.classList.remove('focused'));
+
+  /* ================= SAVED VIEW ================= */
+  const savedList = document.getElementById('saved-list');
+  const savedCountLabel = document.getElementById('saved-count-label');
+  const toggleSelectBtn = document.getElementById('toggle-select-btn');
+  const selectionBar = document.getElementById('selection-bar');
+  const selectionCount = document.getElementById('selection-count');
+  const makeWordbookBtn = document.getElementById('make-wordbook-btn');
+  let selectMode = false;
+  let selectedIds = new Set();
+
+  function renderSavedView(){
+    savedCountLabel.textContent = savedWords.length + '개 저장됨';
+    if(savedWords.length === 0){
+      savedList.innerHTML = `<div class="empty-state">아직 저장한 단어가 없어요. 검색 화면에서 단어 옆 ★ 버튼을 눌러보세요.</div>`;
+      selectionBar.style.display = 'none';
+      toggleSelectBtn.style.display = 'none';
+      return;
+    }
+    toggleSelectBtn.style.display = 'inline-block';
+    savedList.innerHTML = '';
+    savedWords.forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'word-row' + (selectMode ? ' select-mode' : '');
+      row.innerHTML = `
+        <input type="checkbox" class="chk" ${selectedIds.has(w.id) ? 'checked' : ''}>
+        <span class="wr-en">${escapeHtml(w.word)}</span>
+        <span class="wr-ko">${escapeHtml(w.meaningKo || '—')}</span>
+        <button class="wr-del" aria-label="삭제">✕</button>
+      `;
+      const chk = row.querySelector('.chk');
+      chk.addEventListener('change', () => {
+        if(chk.checked) selectedIds.add(w.id); else selectedIds.delete(w.id);
+        updateSelectionBar();
+      });
+      row.querySelector('.wr-en').addEventListener('click', () => {
+        if(selectMode) { chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); return; }
+        hiddenInput.value = w.word;
+        syncDisplay();
+        goTo('search');
+        doSearch(w.word);
+      });
+      row.querySelector('.wr-del').addEventListener('click', () => {
+        savedWords = savedWords.filter(x => x.id !== w.id);
+        selectedIds.delete(w.id);
+        saveLS(LS_SAVED, savedWords);
+        renderSavedView();
+      });
+      savedList.appendChild(row);
+    });
+    updateSelectionBar();
+  }
+
+  function updateSelectionBar(){
+    if(selectMode && selectedIds.size > 0){
+      selectionBar.style.display = 'flex';
+      selectionCount.textContent = selectedIds.size + '개 선택됨';
+    }else{
+      selectionBar.style.display = 'none';
+    }
+  }
+
+  toggleSelectBtn.addEventListener('click', () => {
+    selectMode = !selectMode;
+    toggleSelectBtn.textContent = selectMode ? '선택 취소' : '단어 선택하기';
+    if(!selectMode) selectedIds.clear();
+    renderSavedView();
+  });
+
+  makeWordbookBtn.addEventListener('click', () => {
+    if(selectedIds.size === 0) return;
+    openModal({
+      title: '단어장 이름을 지어주세요',
+      placeholder: '예: 여행 필수 단어',
+      onConfirm: (name) => {
+        wordbooks.unshift({ id: uid(), name, wordIds: Array.from(selectedIds), createdAt: Date.now() });
+        saveLS(LS_WORDBOOKS, wordbooks);
+        showToast('단어장을 만들었어요');
+        selectMode = false;
+        selectedIds.clear();
+        toggleSelectBtn.textContent = '단어 선택하기';
+        renderSavedView();
+        goTo('wordbooks');
+      }
+    });
+  });
+
+  /* ================= WORDBOOKS VIEW ================= */
+  const wordbookListEl = document.getElementById('wordbook-list');
+
+  function renderWordbooksView(){
+    if(wordbooks.length === 0){
+      wordbookListEl.innerHTML = `<div class="empty-state">아직 만든 단어장이 없어요. '저장한 단어'에서 단어를 선택한 뒤 단어장을 만들어보세요.</div>`;
+      return;
+    }
+    wordbookListEl.innerHTML = '<div class="wb-grid"></div>';
+    const grid = wordbookListEl.querySelector('.wb-grid');
+    wordbooks.forEach(wb => {
+      const card = document.createElement('div');
+      card.className = 'wb-card';
+      card.innerHTML = `
+        <div class="wb-name">${escapeHtml(wb.name)}</div>
+        <div class="wb-count">${wb.wordIds.length}개 단어</div>
+      `;
+      card.addEventListener('click', () => {
+        currentWordbookId = wb.id;
+        renderWordbookDetail();
+        goTo('wordbook-detail');
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  const wbDetailTitle = document.getElementById('wb-detail-title');
+  const wbDetailCount = document.getElementById('wb-detail-count');
+  const wbDetailList = document.getElementById('wb-detail-list');
+  document.getElementById('wb-back-btn').addEventListener('click', () => goTo('wordbooks'));
+  document.getElementById('wb-delete-btn').addEventListener('click', () => {
+    wordbooks = wordbooks.filter(wb => wb.id !== currentWordbookId);
+    saveLS(LS_WORDBOOKS, wordbooks);
+    showToast('단어장을 삭제했어요');
+    goTo('wordbooks');
+  });
+
+  function renderWordbookDetail(){
+    const wb = wordbooks.find(w => w.id === currentWordbookId);
+    if(!wb){ goTo('wordbooks'); return; }
+    wbDetailTitle.textContent = wb.name;
+    wbDetailCount.textContent = wb.wordIds.length + '개 단어';
+    const words = wb.wordIds.map(id => savedWords.find(w => w.id === id)).filter(Boolean);
+    if(words.length === 0){
+      wbDetailList.innerHTML = `<div class="empty-state">이 단어장에 남아있는 단어가 없어요.</div>`;
+      return;
+    }
+    wbDetailList.innerHTML = '';
+    words.forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'word-row';
+      row.innerHTML = `
+        <span class="wr-en">${escapeHtml(w.word)}</span>
+        <span class="wr-ko">${escapeHtml(w.meaningKo || '—')}</span>
+        <button class="wr-del" aria-label="단어장에서 제거">✕</button>
+      `;
+      row.querySelector('.wr-en').addEventListener('click', () => {
+        hiddenInput.value = w.word;
+        syncDisplay();
+        goTo('search');
+        doSearch(w.word);
+      });
+      row.querySelector('.wr-del').addEventListener('click', () => {
+        wb.wordIds = wb.wordIds.filter(id => id !== w.id);
+        saveLS(LS_WORDBOOKS, wordbooks);
+        renderWordbookDetail();
+      });
+      wbDetailList.appendChild(row);
+    });
+  }
+
+  /* ---------------- init ---------------- */
+  syncDisplay();
+  renderHistory();
+  window.addEventListener('load', focusInput);
+  setTimeout(focusInput, 100);
+})();
+</script>
+
+</body>
+</html>
